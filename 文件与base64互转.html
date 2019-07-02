@@ -1,6 +1,7 @@
 <html>
 
 <head>
+  <title>文件与base64互转</title>
   <style>
     .container {
       margin: 15px auto;
@@ -50,6 +51,66 @@
         animation: octocat-wave 560ms ease-in-out
       }
     }
+
+    /* tab样式 */
+    .tab {
+      background-color: #ccc;
+    }
+
+    .tab-head {
+      display: grid;
+      grid-template-columns: 50% 50%;
+    }
+
+    .tab-head button {
+      background-color: #ccc;
+      line-height: 0.5rem;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      transition: 0.3s;
+      font-size: 17px;
+    }
+
+    .tab-head button:hover {
+      background-color: rgb(78, 78, 78);
+    }
+
+    .tab-items div:first-child {
+      display: block;
+    }
+
+    .tab-items {
+      border: solid #ddd;
+      border-width: 1px 0 0 0;
+    }
+
+    .tab-items div {
+      display: none;
+      width: auto;
+      height: auto;
+    }
+
+    .tab-items div * {
+      display: block;
+      margin: auto;
+    }
+
+    /* 隐藏原文件选择样式 */
+    #file-selection {
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      position: absolute;
+      z-index: -1;
+    }
+
+    .icon-file {
+      height: 5rem;
+      width: 10rem;
+    }
   </style>
 </head>
 
@@ -72,8 +133,30 @@
     <div>
       <div id="header" class="container">
         <div class="container-inner">
-          <p>文件转base64：<input type="file" id="file-selection" onchange="fileSelected()" />
-            <h2>
+          <div class="tab">
+            <div class="tab-head">
+              <button class="tab-button" onclick="showTab('tab-item1')">从本地选择文件</button>
+              <button class="tab-button" onclick="showTab('tab-item2')">从URL下载文件</button>
+            </div>
+            <div class="tab-items">
+              <div id='tab-item1'>
+                <label for="file-selection">
+                  <svg t="1562050606360" class="icon-file" viewBox="0 0 1024 1024" version="1.1"
+                    xmlns="http://www.w3.org/2000/svg" p-id="2729" width="200" height="200">
+                    <path
+                      d="M910.096853 360.579647v-61.707521c0-52.999376-42.030493-112.28336-98.281728-112.28336H528.430288l-11.681508-22.048347c-11.685603-22.352441-34.588894-36.229158-59.807189-36.229158H154.570848c-50.436591 0-91.447294 42.168717-91.447294 94.010079v575.540275c0 51.814741 41.010703 93.969123 91.447294 93.969124h711.539892c50.436591 0 91.447294-42.154383 91.447294-93.969124V444.614011c-0.001024-30.633625-20.252452-63.054954-47.461181-84.034364z m-98.281728-117.546131c19.540851 0 41.838002 29.75206 41.838002 55.83861v39.040748c-0.956309-0.038908-1.913642-0.097269-2.865855-0.097269H608.55341l-50.21748-94.782089h253.479195z m89.297134 554.828099c0 20.684531-15.709473 37.524373-35.002543 37.524374h-711.538868c-19.292047 0-35.002544-16.839842-35.002544-37.524374V222.32134c0-20.712176 15.709473-37.565329 35.002544-37.565329h302.370743c4.134449 0 7.882893 2.274049 9.867182 6.07676l99.825748 188.420497a28.252068 28.252068 0 0 0 24.94287 15.007087h259.209881c20.229926 0 50.326011 30.12373 50.326011 50.353656v353.247604z"
+                      fill="#3E3A39" p-id="2730"></path>
+                  </svg>
+                  <input type="file" id="file-selection" onchange="fileSelected()" /></label>
+              </div>
+              <div id='tab-item2'>
+                <input style="width: 100%;height: 2.5rem;" type="text" id="file-url-type"
+                  placeholder="文件mimetype(如pdf为，application/pdf)" />
+                <input style="width: 100%;height: 2.5rem;" type="text" id="file-url"
+                  onkeypress="fileUrlEnter(this.value)" placeholder="输入文件url(按回车件结束)" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -81,17 +164,11 @@
         <div class="container-inner">
           <h2>文件base64字符串：</h2>
           <div id="file-info">
-            <div id="file-name">文件名称</div>
-            <div><span id="file-size">0.0 KB</span> <span id="file-size-warning" style="display: none;">This file is
-                large
-                and
-                the resulting base64 string will be very cumbersome.</span></div>
-            <div>Mimetype: <span id="file-type">application/octet-stream</span></div>
             <textarea id="file-base64-data" contenteditable="true"
               style="width: 100%;height: 300px;">data:application/octet-stream;base64,</textarea>
             <div style="margin: 1rem auto;display: flex;justify-content:space-around;">
               <button onclick="base64Change()">预览</button>
-              <button onclick="downloadFile(document.getElementById('file-base64-data').value)">下载</button>
+              <button onclick="savePreviewFile(document.getElementById('file-base64-data').value)">下载</button>
             </div>
           </div>
         </div>
@@ -106,7 +183,8 @@
               width="100%"></iframe>
           </div>
           <div>
-              <input onchange="changeSize(this.value)" style="width: 100%;" type="range" min="1" max="100" step="0.1" value="50">
+            <input onchange="changeSize(this.value)" style="width: 100%;" type="range" min="1" max="100" step="0.1"
+              value="50">
           </div>
         </div>
       </div>
@@ -116,19 +194,11 @@
 </body>
 
 <script>
-  function formatSize(size) {
-    if (size <= 1024) {
-      return size.toFixed(1) + " B";
-    } else if (size <= 1024576) {
-      return (size / 1024).toFixed(1) + " KB";
-    } else if (size <= 1073741824) {
-      return (size / 1024576).toFixed(1) + " MB";
-    }
-  }
   function base64Read(result) {
     document.getElementById("file-base64-data").textContent = result;
     document.getElementById("file-thumb").src = result;
   }
+  //文件选择回调
   function fileSelected() {
     var elem = document.getElementById("file-selection");
     var files = elem.files;
@@ -139,14 +209,6 @@
     var size = file.size;
     var mime = file.type;
     var isImage = /^image\//.test(mime);
-    document.getElementById("file-name").textContent = name;
-    document.getElementById("file-size").textContent = formatSize(size);
-    if (size > 2048) {
-      document.getElementById("file-size-warning").style.display = "initial";
-    } else {
-      document.getElementById("file-size-warning").style.display = "none";
-    }
-    document.getElementById("file-type").textContent = mime;
     document.getElementById("file-base64-data").textContent = "Loading...";
     var reader = new FileReader();
     reader.onload = function () {
@@ -154,12 +216,13 @@
     };
     reader.readAsDataURL(file);
   }
+  //预览base64文件
   function base64Change() {
     let base64 = document.getElementById("file-base64-data").value;
     document.getElementById("file-thumb").src = base64;
   }
 
-  function downloadFile(base64) {
+  function savePreviewFile(base64) {
     const linkSource = base64;
     const downloadLink = document.createElement("a");
     const fileName = "test";
@@ -169,17 +232,64 @@
     downloadLink.click();
   }
 
+  //文件url输入回调
+  function fileUrlEnter(url) {
+    console.log(`开始下载文件:${url}`);
+
+    if (event.keyCode == 13) {
+      window.URL = window.URL || window.webkitURL;  // Take care of vendor prefixes.
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function (e) {
+        if (this.status == 200 || this.status == 201) {
+          const blob = this.response;
+          var reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = function () {
+            let base64data = reader.result;
+            console.log('url文件base64：', base64data);
+            let fileType = document.getElementById("file-url-type").value;
+            if(!fileType){
+              fileType = 'application/pdf';
+            }
+            base64data = base64data.replace('application/octet-stream',fileType);
+            base64Read(base64data);
+          }
+
+        } else {
+          console.log(`status为${this.status},readyState为${this.readyState}`);
+        }
+      };
+
+      xhr.send();
+    }
+
+  }
+
   // 进度条变更时回调
-  function changeSize(value){
+  function changeSize(value) {
     let size = 1;
-    if(value > 50){
+    if (value > 50) {
       //倍数大于50，减去50
       size = value - 50;
-    }else{
+    } else {
       //倍数小于或等于50，加50再除以100
-      size = (value + 50)/100;
+      size = (value + 50) / 100;
     }
-    document.querySelector("iframe").style.zoom=size;
+    document.querySelector("iframe").style.zoom = size;
+  }
+
+  //tab切换显示
+  function showTab(tabId) {
+    const allTabs = document.querySelectorAll(".tab-items div");
+    //先隐藏所有tab
+    allTabs.forEach((tab) => tab.style.display = "none");
+    //只显示tabId对应的tab
+    const tab = document.getElementById(tabId);
+    tab.style.display = "block";
   }
 </script>
 
