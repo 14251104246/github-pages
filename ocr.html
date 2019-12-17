@@ -136,7 +136,7 @@
 <!-- 正文 -->
 <div id="app">
     <div>
-        <div id="header" class="container">
+        <div id="header" class="container"  v-on:paste="pasteHandler">
             <div class="container-inner" style="text-align: center;" v-on:dragover.prevent="" v-on:drop.prevent="dropHandler" >
                 <label for="file-selection">
                     <svg t="1576488863235" class="icon" viewBox="0 0 1024 1024" version="1.1"
@@ -203,8 +203,24 @@
                 } else {
                     // Use DataTransfer interface to access the file(s)
                     for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+                        this.file = ev.dataTransfer.files[i];
                         console.log('... file[' + i + '].name = ' + ev.dataTransfer.files[i].name);
-                        this.file =  ev.dataTransfer.files[i];
+                    }
+                }
+            },
+            pasteHandler: function (event) {
+                var items = event.clipboardData && event.clipboardData.items;
+                event.clipboardData.effectAllowed="copyMove";
+                var file = null;
+                if (items && items.length) {
+                    // 检索剪切板items
+                    for (var i = 0; i < items.length; i++) {
+                        debugger;
+                        if (items[i].type.indexOf('image') !== -1) {
+                            this.file = items[i].getAsFile();
+                            console.log('... file[' + i + '].name = ' + this.file.name);
+                            break;
+                        }
                     }
                 }
             }
@@ -214,21 +230,21 @@
                 this.ocrResult = "开始识别图片中的文本....";
                 const worker = new Tesseract.TesseractWorker();
                 const lang = this.langList.join("+");
-                console.log("识别的语言：",lang);
-                worker.recognize(URL.createObjectURL(value),lang)
+                console.log("识别的语言：", lang);
+                worker.recognize(URL.createObjectURL(value), lang)
                     .progress(progress => {
                         console.log('progress', progress);
-                        this.ocrResult = "当前识别状态:"+progress.status;
+                        this.ocrResult = "当前识别状态:" + progress.status;
                     })
                     .then(result => {
                         console.log('result', result);
                         this.ocrResult = result.text;
                     })
-                    .catch(()=>this.ocrResult = "图片识别失败！")
+                    .catch(() => this.ocrResult = "图片识别失败！")
                     .finally(() => worker.terminate());
             }
         }
-    })
+    });
 </script>
 
 </html>
